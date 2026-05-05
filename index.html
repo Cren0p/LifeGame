@@ -1016,6 +1016,7 @@ function renderOverlay() {
     app.innerHTML = '';
     return;
   }
+  const rkBg  = {1:'#FFD700',2:'#B8B8B8',3:'#CD7F32',4:'#3a3a3a'};
   const rkTxt = {1:'#000',  2:'#000',  3:'#fff',  4:'#fff'};
 
   if (state.ended || state.phase === 'result') {
