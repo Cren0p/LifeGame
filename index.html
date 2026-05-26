@@ -150,7 +150,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 /* ── 결과 발표 ── */
 .res-section{margin-bottom:28px;}
 .res-section-label{font-size:.68rem;font-weight:700;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin-bottom:12px;}
-.res-grid-ind{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.res-grid-ind{display:grid;grid-template-columns:repeat(var(--ind-cols,6),1fr);gap:10px;}
 .res-grid-team{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 @media(max-width:900px){.res-grid-ind{grid-template-columns:repeat(4,1fr);}}
 @media(max-width:600px){.res-grid-ind{grid-template-columns:repeat(3,1fr);}.res-grid-team{grid-template-columns:repeat(2,1fr);}}
@@ -307,7 +307,7 @@ function defState() {
     log: [],
     ended: false,
     hiddenRounds: [false, false, false],
-    revealState: { ind: Array(8).fill(false), team: Array(4).fill(false) },
+    revealState: { ind: Array(MEMBERS.length).fill(false), team: Array(4).fill(false) },
     updatedAt: 0
   };
 }
@@ -337,7 +337,7 @@ function saveMoney(changes) {
 // ── 멤버 이미지 맵 ─────────────────────────────────────────────
 const AVATAR_MAP = {
   '천양':'CHUNYANG','타요':'TAYO','머독':'MURDOC','코렛트':'COLLET',
-  '진호':'JINHO','징버거':'JINGBURGER','제금':'JEGEUM','문모모':'MOONMOMO',
+  '진호:'JINHO','징버거':'JINGBURGER','제금':'JEGEUM','문모모':'MOONMOMO',
   '마다옴':'MADAOMM','나나문':'NANAMOON','한결':'HANGYEOL','구슬요':'BEADYO'
 };
 const REPO_RAW = 'https://raw.githubusercontent.com/Cren0p/LifeGame/main/';
@@ -366,9 +366,9 @@ function sanitize(s) {
   if (!Array.isArray(s.hiddenRounds) || s.hiddenRounds.length !== 3) s.hiddenRounds = [false, false, false];
   // revealState: 구버전(배열) → 신버전(객체) 자동 변환
   if (!s.revealState || Array.isArray(s.revealState) || typeof s.revealState !== 'object') {
-    s.revealState = { ind: Array(8).fill(false), team: Array(4).fill(false) };
+    s.revealState = { ind: Array(MEMBERS.length).fill(false), team: Array(4).fill(false) };
   }
-  if (!Array.isArray(s.revealState.ind) || s.revealState.ind.length !== 8) s.revealState.ind = Array(8).fill(false);
+  if (!Array.isArray(s.revealState.ind) || s.revealState.ind.length !== MEMBERS.length) s.revealState.ind = Array(MEMBERS.length).fill(false);
   if (!Array.isArray(s.revealState.team) || s.revealState.team.length !== 4) s.revealState.team = Array(4).fill(false);
   if (s.ended === undefined) s.ended = false;
   return s;
@@ -610,6 +610,7 @@ function renderResult() {
     t.members.map(m => ({ ...m, teamColor: t.color }))
   ).sort((a, b) => b.money - a.money);
 
+  const cols = MEMBERS.length <= 8 ? 4 : 6;
   const indCards = allPlayers.map((p, ri) => {
     const on = rv.ind[ri];
     const av = getAvatar(p.name);
@@ -666,7 +667,7 @@ function renderResult() {
     </div>
     <div class="res-section">
       <div class="res-section-label">개인 순위</div>
-      <div class="res-grid-ind">${indCards}</div>
+      <div class="res-grid-ind" style="--ind-cols:${cols}">${indCards}</div>
     </div>
     <div class="res-section">
       <div class="res-section-label">팀 순위</div>
@@ -870,10 +871,10 @@ function bind() {
       showModal('게임을 먼저 종료해야<br>결과 발표로 이동할 수 있습니다.', [{ label:'확인' }]);
       return;
     }
-    state.phase = 'result'; state.revealState = { ind: Array(8).fill(false), team: Array(4).fill(false) }; save(); render();
+    state.phase = 'result'; state.revealState = { ind: Array(MEMBERS.length).fill(false), team: Array(4).fill(false) }; save(); render();
   });
-  on('btnRevealAll', () => { state.revealState = { ind: Array(8).fill(true), team: Array(4).fill(true) }; save(); render(); });
-  on('btnHideAll',   () => { state.revealState = { ind: Array(8).fill(false), team: Array(4).fill(false) }; save(); render(); });
+  on('btnRevealAll', () => { state.revealState = { ind: Array(MEMBERS.length).fill(true), team: Array(4).fill(true) }; save(); render(); });
+  on('btnHideAll',   () => { state.revealState = { ind: Array(MEMBERS.length).fill(false), team: Array(4).fill(false) }; save(); render(); });
 
   document.querySelectorAll('[data-rv-ind]').forEach(el => {
     el.addEventListener('click', () => {
