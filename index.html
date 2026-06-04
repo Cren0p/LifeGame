@@ -348,6 +348,14 @@ function getAvatar(name) {
 
 function sanitize(s) {
   if (!s) return defState();
+  // 저장된 멤버 목록이 현재 MEMBERS와 다르면 자동 리셋
+  const savedMembers = [
+    ...(Array.isArray(s.unassigned) ? s.unassigned : []),
+    ...(Array.isArray(s.teams) ? s.teams.flatMap(t => Array.isArray(t.members) ? t.members.filter(Boolean).map(m => m.name) : []) : [])
+  ];
+  if (savedMembers.length > 0 && !savedMembers.every(n => MEMBERS.includes(n))) {
+    return defState();
+  }
   s.unassigned = Array.isArray(s.unassigned) ? s.unassigned : [];
   s.log = Array.isArray(s.log) ? s.log : [];
   if (!Array.isArray(s.teams)) s.teams = defState().teams;
@@ -1082,23 +1090,8 @@ function startOvTimer() {
 
 // ── FIREBASE LISTENER ────────────────────────────────────────────
 STATE_REF.on('value', snapshot => {
-  const raw = snapshot.val();
+  const incoming = sanitize(snapshot.val());
 
-  // 멤버 불일치 감지 → 리셋 후 저장
-  if (raw) {
-    const savedMembers = [
-      ...(Array.isArray(raw.unassigned) ? raw.unassigned : []),
-      ...(Array.isArray(raw.teams) ? raw.teams.flatMap(t => Array.isArray(t.members) ? t.members.filter(Boolean).map(m => m.name) : []) : [])
-    ];
-    if (savedMembers.length > 0 && !savedMembers.every(n => MEMBERS.includes(n))) {
-      state = defState();
-      save();
-      if (!isOv) render();
-      return;
-    }
-  }
-
-  const incoming = sanitize(raw);
   if (!isOv && incoming.updatedAt === myLastSave && state !== null) return;
 
   if (isOv && state !== null && !incoming.ended && incoming.phase === 'game') {
