@@ -1084,8 +1084,8 @@ function startOvTimer() {
 STATE_REF.on('value', snapshot => {
   const raw = snapshot.val();
 
-  // 멤버 불일치 감지 → 리셋 후 저장
-  if (raw) {
+  // 첫 로드시에만 멤버 불일치 감지 (이후 업데이트에선 체크 안 함)
+  if (state === null && raw) {
     const savedMembers = [
       ...(Array.isArray(raw.unassigned) ? raw.unassigned : []),
       ...(Array.isArray(raw.teams) ? raw.teams.flatMap(t => Array.isArray(t.members) ? t.members.filter(Boolean).map(m => m.name) : []) : [])
