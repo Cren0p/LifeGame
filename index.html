@@ -1122,7 +1122,14 @@ STATE_REF.on('value', snapshot => {
     return;
   }
 
-  if (!isOv && state !== null && incoming.updatedAt === myLastSave) return;
+  // 첫 로드 (state가 null인데 raw는 있음)
+  if (state === null) {
+    state = incoming;
+    if (isOv) renderOverlay(); else render();
+    return;
+  }
+
+  if (!isOv && incoming.updatedAt === myLastSave) return;
 
   if (isOv && state !== null && !incoming.ended && incoming.phase === 'game') {
     // 변동된 경기(round) 감지: 같은 팀·슬롯의 money 비교
