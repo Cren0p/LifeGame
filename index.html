@@ -338,13 +338,22 @@ function getAvatar(name) {
 
 function sanitize(s) {
   if (!s) return defState();
-  s.unassigned = Array.isArray(s.unassigned) ? s.unassigned : [];
-  s.log = Array.isArray(s.log) ? s.log : [];
   if (!Array.isArray(s.teams)) s.teams = defState().teams;
+  // Firebase가 배열을 객체로 변환하는 경우 대응
   s.teams.forEach(t => {
-    t.members = Array.isArray(t.members) ? t.members.filter(m => m !== null && m !== undefined) : [];
+    if (t.members && !Array.isArray(t.members)) {
+      t.members = Object.values(t.members).filter(m => m !== null && m !== undefined);
+    } else {
+      t.members = Array.isArray(t.members) ? t.members.filter(m => m !== null && m !== undefined) : [];
+    }
     if (!t.color) t.color = DEF_COLORS[t.id] || '#888';
   });
+  // Firebase가 빈 배열을 삭제하는 경우 대응: 팀에 있는 멤버를 제외한 나머지가 미배정
+  if (!Array.isArray(s.unassigned)) {
+    const assigned = s.teams.flatMap(t => t.members.map(m => m.name));
+    s.unassigned = MEMBERS.filter(m => !assigned.includes(m));
+  }
+  s.log = Array.isArray(s.log) ? s.log : [];
   if (!Array.isArray(s.hiddenRounds) || s.hiddenRounds.length !== 3) s.hiddenRounds = [false, false, false];
   // revealState: 구버전(배열) → 신버전(객체) 자동 변환
   if (!s.revealState || Array.isArray(s.revealState) || typeof s.revealState !== 'object') {
