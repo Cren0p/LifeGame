@@ -49,7 +49,7 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 
 /* 팀 4개 가로 배열 */
 .setup-teams{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px;}
-@media(max-width:900px){.setup-teams{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:1100px){.setup-teams{grid-template-columns:repeat(2,1fr);}}
 @media(max-width:500px){.setup-teams{grid-template-columns:1fr;}}
 .sc{background:var(--surface);border:1px solid var(--border);padding:12px;cursor:default;transition:border-color .2s;}
 .sc.drop{border-color:rgba(255,255,255,.35);box-shadow:0 0 0 2px rgba(255,255,255,.1);}
@@ -98,7 +98,8 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .game-top{display:flex;align-items:center;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
 .game-top h2{font-size:1rem;font-weight:700;color:var(--muted);flex:1;}
 .rounds-wrap{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:24px;}
-@media(max-width:900px){.rounds-wrap{grid-template-columns:1fr;}}
+@media(max-width:900px){.rounds-wrap{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.rounds-wrap{grid-template-columns:1fr;}}
 .round-col{background:var(--surface);border:1px solid var(--border);overflow:hidden;}
 .round-header{padding:12px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
 .round-title{font-size:.82rem;font-weight:800;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;}
@@ -164,11 +165,12 @@ body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:1
 .res-card-rank{width:22px;height:22px;display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:900;flex-shrink:0;}
 .res-card-name{font-size:1.3rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 .res-card-money{font-size:1.2rem;font-weight:600;font-variant-numeric:tabular-nums;text-align:center;flex-shrink:0;margin-top:-4px;}
+.res-card-team{aspect-ratio:unset;}
 .res-card-hidden{color:rgba(255,255,255,.2);letter-spacing:.05em;}
-.res-team-avatars{display:flex;align-items:center;justify-content:center;gap:4px;width:100%;flex-shrink:0;}
-.res-team-av{flex:1;aspect-ratio:1/1;border-radius:4px;object-fit:cover;max-width:34%;}
-.res-team-av-ph{flex:1;aspect-ratio:1/1;border-radius:4px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.9rem;max-width:34%;}
-.res-team-av-hidden{flex:1;aspect-ratio:1/1;border-radius:4px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--muted);max-width:34%;}
+.res-team-avatars{display:grid;grid-template-columns:1fr 1fr;gap:3px;width:72%;flex-shrink:0;}
+.res-team-av{width:100%;aspect-ratio:1/1;border-radius:3px;object-fit:cover;display:block;}
+.res-team-av-ph{width:100%;aspect-ratio:1/1;border-radius:3px;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:.9rem;}
+.res-team-av-hidden{width:100%;aspect-ratio:1/1;border-radius:3px;background:var(--card);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--muted);}
 .ov-url{font-family:'Consolas',monospace;font-size:.76rem;color:#FFA502;background:var(--card);padding:8px 12px;word-break:break-all;border:1px solid var(--border);display:block;margin:7px 0 10px;}
 .ov-hint{font-size:.74rem;color:var(--muted);line-height:1.7;}
 
@@ -286,8 +288,8 @@ setTimeout(() => {
   }
 }, 5000);
 
-const MEMBERS = ['우정잉','캬앙','깐숙','베베리','예다','꿈틀','세나','김진솔','민결희','따린','단즈','코렛트'];
-const DEF_COLORS = ['#FF4757','#2ED573','#FFA502','#E879F9'];
+const MEMBERS = ['천양','타요','머독','코렛트','진호','징버거','제금','문모모','마다옴','나나문','한결','구슬요'];
+const DEF_COLORS = ['#FF4757','#2ED573','#FFA502','#1E90FF'];
 const TN = ['팀 1','팀 2','팀 3','팀 4'];
 const isOv = location.search.indexOf('overlay') !== -1;
 
@@ -302,7 +304,10 @@ let myLastSave = 0; // 내가 저장한 updatedAt — Firebase echo 무시용
 function defState() {
   return {
     phase: 'setup',
-    teams: TN.map((name, i) => ({ id: i, name, color: DEF_COLORS[i], members: [] })),
+    teams: TN.map((name, i) => ({
+      id: i, name, color: DEF_COLORS[i],
+      members: []
+    })),
     unassigned: [...MEMBERS],
     log: [],
     ended: false,
@@ -326,9 +331,9 @@ function saveMoney() {
 // Firebase는 빈 배열을 null로 반환 → 배열로 복원
 // ── 멤버 이미지 맵 ─────────────────────────────────────────────
 const AVATAR_MAP = {
-  '우정잉':'FRIENDSHIPING','캬앙':'KYAANG','깐숙':'KKANSUK','베베리':'BEBERRY',
-  '예다':'YEDA','꿈틀':'GGUMTEUL','세나':'SENA','김진솔':'KIMJINSXL',
-  '민결희':'MINGYEOLHEE','따린':'DDARIN','단즈':'DANZ','코렛트':'COLLET'
+  '천양':'CHUNYANG','타요':'TAYO','머독':'MURDOC','코렛트':'COLLET',
+  '진호':'JINHO','징버거':'JINGBURGER','제금':'JEGEUM','문모모':'MOONMOMO',
+  '마다옴':'MADAOMM','나나문':'NANAMOON','한결':'HANGYEOL','구슬요':'BEADYO'
 };
 const REPO_RAW = 'https://raw.githubusercontent.com/Cren0p/LifeGame/main/';
 function getAvatar(name) {
@@ -428,22 +433,18 @@ function render() {
 }
 
 function renderSetup() {
-  const ok = state.unassigned.length === 0;
+  const ok = state.teams.every(t => t.members.length === 3);
 
-  // 미배정 풀 - 사진 카드형
-  const poolHtml = state.unassigned.length
-    ? state.unassigned.map(m => {
-        const av = getAvatar(m);
-        return `<div class="mcard" draggable="true" data-member="${m}" data-src="pool">
-          ${av
-            ? `<img class="mcard-img" src="${av}" alt="${m}">`
-            : `<div class="mcard-img-ph">👤</div>`}
-          <div class="mcard-name">${m}</div>
-        </div>`;
-      }).join('')
-    : '<span style="color:var(--muted);font-size:.8rem;align-self:center;padding:16px">✅ 모든 멤버 배정 완료</span>';
+  // 미배정 풀
+  const poolHtml = state.unassigned.map(name => {
+    const av = getAvatar(name);
+    return `<div class="mcard" draggable="true" data-src="pool" data-name="${name}">
+      ${av ? `<img class="mcard-img" src="${av}" alt="${name}">` : `<div class="mcard-img-ph">👤</div>`}
+      <div class="mcard-name">${name}</div>
+    </div>`;
+  }).join('');
 
-  // 팀 카드 - 슬롯 사진 강조형
+  // 팀 카드 - 슬롯 3개
   const teamsHtml = state.teams.map((t, i) => {
     const slotsHtml = [0,1,2].map(slot => {
       const m = t.members[slot];
@@ -451,7 +452,7 @@ function renderSetup() {
         const av = getAvatar(m.name);
         return `<div class="slot-item">
           <div class="slot-num">${slot+1}</div>
-          <div class="slot-card" draggable="true" data-dti="${i}" data-dslot="${slot}" data-src="slot" style="background:${t.color}88;border-color:${t.color}">
+          <div class="slot-card" draggable="true" data-dti="${i}" data-dslot="${slot}" data-src="slot" style="background:${t.color}88;border-color:${t.color};${state.log.length > 0 ? 'cursor:not-allowed;opacity:.75' : ''}">
             <div class="drag-handle">⠿</div>
             ${av ? `<img class="slot-card-img" src="${av}" alt="${m.name}">` : `<div class="slot-card-img" style="background:${t.color};display:flex;align-items:center;justify-content:center;font-size:1.2rem">👤</div>`}
             <div class="slot-card-name" style="color:${getTextColor(t.color)}">${m.name}</div>
@@ -483,16 +484,18 @@ function renderSetup() {
       <div class="pnav" id="goGame">② 게임 진행</div>
       <div class="pnav" id="goResult">③ 결과 발표</div>
     </div>
-    <div class="slabel">미배정 멤버 (${state.unassigned.length}명)</div>
-    <div class="pool">${poolHtml}</div>
-    <div class="slot-legend" style="display:flex;align-items:center;justify-content:space-between;">
-      <div class="sleg">미배정 → 팀 슬롯으로 드래그해서 배정 &nbsp;·&nbsp; 팀 슬롯 → 미배정 풀로 드래그해서 해제</div>
-      <button class="btn btn-ghost btn-sm" id="btnRandom">🎲 무작위 배치</button>
+    <div class="slabel">미배정 멤버 (드래그하여 팀에 배치)</div>
+    <div class="pool ${state.unassigned.length === 0 ? '' : ''}" id="poolArea">${poolHtml || '<div style="color:var(--muted);font-size:.8rem;padding:4px">모든 멤버가 배정되었습니다</div>'}</div>
+    <div class="slot-legend" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      ${state.log.length > 0
+        ? `<div class="sleg" style="color:#FF4757">🔒 게임 진행 중 배치 변경 불가 — 금액 초기화 시 해제</div><button class="btn btn-ghost btn-sm" disabled style="opacity:.35;cursor:not-allowed">🎲 무작위 배치</button>`
+        : `<div class="sleg">슬롯 순서 = 경기 배정 순서. 같은 팀 안에서 드래그로 순서 변경 가능.</div><button class="btn btn-ghost btn-sm" id="btnRandom">🎲 무작위 배치</button>`
+      }
     </div>
     <div class="setup-teams">${teamsHtml}</div>
     <div class="setup-actions">
       <button class="btn btn-ghost" id="btnReset">초기화</button>
-      <button class="btn btn-start" id="btnStart" ${ok?'':'disabled'}>${ok?'게임 시작 →':state.unassigned.length+'명 미배정'}</button>
+      <button class="btn btn-start" id="btnStart" ${ok?'':'disabled'}>${ok?'게임 시작 →':'멤버 배정 필요'}</button>
     </div>
     ${renderOvBox()}
   </div>`;
@@ -500,8 +503,8 @@ function renderSetup() {
 
 function renderGame() {
   const teamRanks = getTeamRanks();
-  const rkL = ['🥇','🥈','🥉','4위'];
-  const rkC = {1:'#FFD700',2:'#B8B8B8',3:'#CD7F32',4:'#666'};
+  const rkL = ['🥇','🥈','🥉'];
+  const rkC = {1:'#FFD700',2:'#B8B8B8',3:'#CD7F32'};
   const roundNames = ['경기 1','경기 2','경기 3'];
 
   const totHtml = state.teams.map((t, i) => {
@@ -631,8 +634,8 @@ function renderResult() {
             : `<div class="res-team-av-ph">👤</div>`;
         }).join('')
       : [0,1,2].map(() => `<div class="res-team-av-hidden">?</div>`).join('');
-    return `<div class="res-card" data-rv-team="${ri}">
-      <div class="res-team-avatars">${avatarsHtml}</div>
+    return `<div class="res-card res-card-team" data-rv-team="${ri}">
+      <div class="res-team-avatars" style="grid-template-columns:1fr 1fr 1fr">${avatarsHtml}</div>
       <div class="res-card-rank-name">
         <div class="res-card-rank" style="background:${rkBg[ri]};color:${rkTxt[ri]}">${ri+1}</div>
         <div class="res-card-name" style="color:${on ? t.color : 'var(--muted)'}">${on ? members : '???'}</div>
@@ -662,7 +665,7 @@ function renderResult() {
     </div>
     <div class="res-section">
       <div class="res-section-label">팀 순위</div>
-      <div class="res-grid-team">${teamCards}</div>
+      <div class="res-grid-team" style="grid-template-columns:repeat(4,1fr)">${teamCards}</div>
     </div>
     ${renderOvBox()}
   </div>`;
@@ -703,16 +706,18 @@ function bind() {
 
   // ── 드래그 통합 (팀 편성) ──────────────────────────────────────
   if (state.phase === 'setup') {
-    let dragSrc = null; // { type:'pool'|'slot', name, ti?, slot? }
+    const locked = state.log.length > 0;
+    let dragSrc = null; // { type: 'pool'|'slot', name, ti?, slot? }
 
     function clearDragOver() {
       document.querySelectorAll('.drag-over').forEach(x => x.classList.remove('drag-over'));
     }
 
-    // 미배정 mcard 드래그
-    document.querySelectorAll('.mcard[draggable="true"]').forEach(el => {
+    // 풀 mcard 드래그
+    document.querySelectorAll('.mcard[data-src="pool"]').forEach(el => {
       el.addEventListener('dragstart', e => {
-        dragSrc = { type: 'pool', name: el.dataset.member };
+        if (locked) { e.preventDefault(); return; }
+        dragSrc = { type: 'pool', name: el.dataset.name };
         e.dataTransfer.effectAllowed = 'move';
         setTimeout(() => el.classList.add('dragging'), 0);
       });
@@ -722,71 +727,74 @@ function bind() {
     // 배정된 slot-card 드래그
     document.querySelectorAll('.slot-card[draggable="true"]').forEach(el => {
       el.addEventListener('dragstart', e => {
-        dragSrc = { type: 'slot', ti: parseInt(el.dataset.dti), slot: parseInt(el.dataset.dslot) };
+        if (locked) { e.preventDefault(); return; }
+        dragSrc = { type: 'slot', ti: parseInt(el.dataset.dti), slot: parseInt(el.dataset.dslot), name: state.teams[parseInt(el.dataset.dti)].members[parseInt(el.dataset.dslot)]?.name };
         e.dataTransfer.effectAllowed = 'move';
         setTimeout(() => el.classList.add('dragging'), 0);
       });
       el.addEventListener('dragend', () => { el.classList.remove('dragging'); clearDragOver(); dragSrc = null; });
     });
 
-    // 드롭 타겟 1: 빈 슬롯 (.slot-empty)
+    // 드롭 타겟: 빈 슬롯
     document.querySelectorAll('.slot-empty').forEach(el => {
-      el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+      el.addEventListener('dragover', e => {
+        if (locked || !dragSrc) return;
+        e.preventDefault(); el.classList.add('drag-over');
+      });
       el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
       el.addEventListener('drop', e => {
         e.preventDefault(); el.classList.remove('drag-over');
-        if (!dragSrc) return;
+        if (locked || !dragSrc) return;
         const dti = parseInt(el.dataset.dti), dslot = parseInt(el.dataset.dslot);
+        const t = state.teams[dti];
+        if (t.members[dslot]) return; // 이미 차있으면 무시
         if (dragSrc.type === 'pool') {
-          const t = state.teams[dti];
-          // 빈 슬롯에 삽입 - null 없이 splice로 정확한 위치에
-          const newMember = { name: dragSrc.name, money: 0 };
-          if (dslot >= t.members.length) {
-            t.members.push(newMember);
-          } else if (!t.members[dslot]) {
-            t.members[dslot] = newMember;
-          } else return;
-          state.unassigned = state.unassigned.filter(x => x !== dragSrc.name);
+          t.members[dslot] = { name: dragSrc.name, money: 0 };
+          state.unassigned = state.unassigned.filter(n => n !== dragSrc.name);
         } else {
-          // slot → 빈슬롯: 이동
-          const srcT = state.teams[dragSrc.ti], dstT = state.teams[dti];
-          const member = srcT.members[dragSrc.slot];
-          if (!member) return;
-          // 소스에서 제거
-          srcT.members.splice(dragSrc.slot, 1);
-          // 목적지에 삽입
-          if (dslot >= dstT.members.length) {
-            dstT.members.push(member);
-          } else {
-            dstT.members.splice(dslot, 0, member);
-          }
+          // slot → 빈 slot (팀 무관)
+          const srcT = state.teams[dragSrc.ti];
+          const moved = srcT.members[dragSrc.slot];
+          srcT.members[dragSrc.slot] = undefined;
+          t.members[dslot] = moved;
+          // 빈 자리 정리 (undefined 제거 후 길이 유지)
+          srcT.members = srcT.members.filter(m => m !== undefined);
+          // 팀이 달라지면 unassigned 건드릴 필요 없음
         }
         dragSrc = null; save(); render();
       });
     });
 
-    // 드롭 타겟 2: 채워진 슬롯 (.slot-card) — 스왑
+    // 드롭 타겟: 채워진 슬롯 — 스왑 (같은 팀 내) 또는 교체 (팀 간)
     document.querySelectorAll('.slot-card[draggable="true"]').forEach(el => {
-      el.addEventListener('dragover', e => { e.preventDefault(); el.classList.add('drag-over'); });
+      el.addEventListener('dragover', e => {
+        if (locked || !dragSrc) return;
+        e.preventDefault(); el.classList.add('drag-over');
+      });
       el.addEventListener('dragleave', () => el.classList.remove('drag-over'));
       el.addEventListener('drop', e => {
         e.preventDefault(); el.classList.remove('drag-over');
-        if (!dragSrc) return;
+        if (locked || !dragSrc) return;
         const dti = parseInt(el.dataset.dti), dslot = parseInt(el.dataset.dslot);
         if (dragSrc.type === 'pool') {
-          // pool → 채워진슬롯: 기존 멤버는 풀로
-          const dstT = state.teams[dti];
-          const displaced = dstT.members[dslot];
-          dstT.members[dslot] = { name: dragSrc.name, money: 0 };
-          state.unassigned = state.unassigned.filter(x => x !== dragSrc.name);
+          // pool → 채워진 슬롯: 기존 멤버를 풀로 돌려보냄
+          const t = state.teams[dti];
+          const displaced = t.members[dslot];
+          t.members[dslot] = { name: dragSrc.name, money: 0 };
+          state.unassigned = state.unassigned.filter(n => n !== dragSrc.name);
           if (displaced) state.unassigned.push(displaced.name);
         } else {
-          // slot → slot: 스왑
-          if (dragSrc.ti === dti && dragSrc.slot === dslot) return;
-          const srcT = state.teams[dragSrc.ti], dstT = state.teams[dti];
+          // slot → slot 스왑
+          const srcT = state.teams[dragSrc.ti];
+          const dstT = state.teams[dti];
           const srcM = srcT.members[dragSrc.slot];
           const dstM = dstT.members[dslot];
-          if (srcM && dstM) {
+          if (dragSrc.ti === dti) {
+            // 같은 팀 내 순서 변경
+            srcT.members[dragSrc.slot] = dstM;
+            dstT.members[dslot] = srcM;
+          } else {
+            // 팀 간 스왑
             srcT.members[dragSrc.slot] = dstM;
             dstT.members[dslot] = srcM;
           }
@@ -795,23 +803,27 @@ function bind() {
       });
     });
 
-    // 드롭 타겟 3: 미배정 풀 — 슬롯에서 제거
-    const poolEl = document.querySelector('.pool');
-    if (poolEl) {
-      poolEl.addEventListener('dragover', e => { e.preventDefault(); poolEl.classList.add('drag-over'); });
-      poolEl.addEventListener('dragleave', () => poolEl.classList.remove('drag-over'));
-      poolEl.addEventListener('drop', e => {
-        e.preventDefault(); poolEl.classList.remove('drag-over');
-        if (!dragSrc || dragSrc.type !== 'slot') return;
+    // 드롭 타겟: pool — slot에서 돌려보내기
+    const poolArea = document.getElementById('poolArea');
+    if (poolArea) {
+      poolArea.addEventListener('dragover', e => {
+        if (locked || !dragSrc || dragSrc.type !== 'slot') return;
+        e.preventDefault(); poolArea.classList.add('drag-over');
+      });
+      poolArea.addEventListener('dragleave', () => poolArea.classList.remove('drag-over'));
+      poolArea.addEventListener('drop', e => {
+        e.preventDefault(); poolArea.classList.remove('drag-over');
+        if (locked || !dragSrc || dragSrc.type !== 'slot') return;
         const srcT = state.teams[dragSrc.ti];
-        const member = srcT.members[dragSrc.slot];
-        if (!member) return;
-        srcT.members.splice(dragSrc.slot, 1);
-        state.unassigned.push(member.name);
+        const moved = srcT.members[dragSrc.slot];
+        if (moved) {
+          srcT.members.splice(dragSrc.slot, 1);
+          state.unassigned.push(moved.name);
+        }
         dragSrc = null; save(); render();
       });
     }
-  }
+
 
   document.querySelectorAll('.color-pick').forEach(el => {
     el.addEventListener('click', e => e.stopPropagation());
@@ -836,23 +848,17 @@ function bind() {
   });
 
   on('btnRandom', () => {
-    // 전체 멤버 수집 (이미 배정된 것도 포함)
-    const all = [
-      ...state.unassigned,
-      ...state.teams.flatMap(t => t.members.filter(Boolean).map(m => m.name))
-    ];
-    // Fisher-Yates 셔플
+    if (state.log.length > 0) return;
+    // 전체 멤버 셔플 후 4팀 3슬롯 배분
+    const all = [...MEMBERS];
     for (let i = all.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [all[i], all[j]] = [all[j], all[i]];
     }
-    // 팀 초기화 후 균등 배분 (8명 → 각 팀 2명)
-    state.teams.forEach(t => { t.members = []; });
-    state.unassigned = [];
-    all.forEach((name, idx) => {
-      const ti = idx % state.teams.length;
-      state.teams[ti].members.push({ name, money: 0 });
+    state.teams.forEach((t, i) => {
+      t.members = all.slice(i * 3, i * 3 + 3).map(n => ({ name: n, money: 0 }));
     });
+    state.unassigned = [];
     save(); render();
   });
   on('btnReset', () => showModal('팀 편성을 초기화할까요?', [
@@ -1009,7 +1015,6 @@ function renderOverlay() {
   const app = document.getElementById('app');
   const activeRounds = [0,1,2].filter(r => roundPlayers(r).length > 0);
   const allHidden = activeRounds.length > 0 && activeRounds.every(r => state.hiddenRounds[r]);
-  if (allHidden) {
     if (ovTimer) { clearInterval(ovTimer); ovTimer = null; }
     app.innerHTML = '';
     return;
