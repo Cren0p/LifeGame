@@ -1084,7 +1084,7 @@ function startOvTimer() {
 STATE_REF.on('value', snapshot => {
   const incoming = sanitize(snapshot.val());
 
-  if (!isOv && incoming.updatedAt === myLastSave && state !== null) return;
+  if (!isOv && state !== null && incoming.updatedAt <= state.updatedAt) return;
 
   if (isOv && state !== null && !incoming.ended && incoming.phase === 'game') {
     // 변동된 경기(round) 감지: 같은 팀·슬롯의 money 비교
