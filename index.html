@@ -1054,8 +1054,9 @@ function renderOverlay() {
 
   // 애니메이션 종료 후 flip 클래스 제거 (패널 전환 시 재실행 방지)
   setTimeout(() => {
-    document.querySelectorAll('.fd-old-up, .fd-new-up, .fd-old-dn, .fd-new-dn').forEach(el => {
-      el.classList.remove('fd-old-up', 'fd-new-up', 'fd-old-dn', 'fd-new-dn');
+    document.querySelectorAll('.fd-old-up, .fd-old-dn').forEach(el => el.remove());
+    document.querySelectorAll('.fd-new-up, .fd-new-dn').forEach(el => {
+      el.classList.remove('fd-new-up', 'fd-new-dn');
     });
   }, 400);
 
@@ -1085,12 +1086,10 @@ function startOvTimer() {
 }
 
 // ── FIREBASE LISTENER ────────────────────────────────────────────
-let memberResetDone = false;
-
 STATE_REF.on('value', snapshot => {
   const raw = snapshot.val();
 
-  // 멤버 불일치: sanitize 전 raw 데이터로 체크 — 항상 무시
+  // 멤버 불일치: 옛 멤버 데이터는 항상 무시 (Firebase에 쓰지 않음)
   if (raw) {
     const rawNames = [];
     if (Array.isArray(raw.unassigned)) rawNames.push(...raw.unassigned);
@@ -1099,13 +1098,8 @@ STATE_REF.on('value', snapshot => {
       members.forEach(m => { if (m && m.name) rawNames.push(m.name); });
     });
     if (rawNames.length > 0 && !rawNames.every(n => MEMBERS.includes(n))) {
-      if (!memberResetDone) {
-        memberResetDone = true;
-        state = defState();
-        save();
-        if (!isOv) render();
-      }
-      return; // 옛 멤버 데이터는 항상 무시
+      if (state === null) { state = defState(); if (!isOv) render(); }
+      return;
     }
   }
 
