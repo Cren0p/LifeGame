@@ -1100,6 +1100,7 @@ STATE_REF.on('value', snapshot => {
     if (rawNames.length > 0 && !rawNames.every(n => MEMBERS.includes(n))) {
       if (state === null) {
         state = defState();
+        save();
         if (isOv) renderOverlay(); else render();
       }
       return;
