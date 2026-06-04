@@ -319,7 +319,7 @@ function save() {
 }
 
 // 금액 변경도 전체 save 사용 (Firebase 배열 구조 보존)
-function saveMoney(changes) {
+function saveMoney() {
   save();
 }
 
@@ -739,22 +739,27 @@ function bind() {
         const dti = parseInt(el.dataset.dti), dslot = parseInt(el.dataset.dslot);
         if (dragSrc.type === 'pool') {
           const t = state.teams[dti];
-          // dslot 위치에 삽입 (배열 길이 맞춤)
-          while (t.members.length <= dslot) t.members.push(null);
-          if (t.members[dslot]) return; // 이미 채워짐
-          t.members[dslot] = { name: dragSrc.name, money: 0 };
+          // 빈 슬롯에 삽입 - null 없이 splice로 정확한 위치에
+          const newMember = { name: dragSrc.name, money: 0 };
+          if (dslot >= t.members.length) {
+            t.members.push(newMember);
+          } else if (!t.members[dslot]) {
+            t.members[dslot] = newMember;
+          } else return;
           state.unassigned = state.unassigned.filter(x => x !== dragSrc.name);
         } else {
-          // slot → 빈슬롯
+          // slot → 빈슬롯: 이동
           const srcT = state.teams[dragSrc.ti], dstT = state.teams[dti];
           const member = srcT.members[dragSrc.slot];
           if (!member) return;
-          while (dstT.members.length <= dslot) dstT.members.push(null);
-          if (dstT.members[dslot]) return;
-          dstT.members[dslot] = member;
-          srcT.members[dragSrc.slot] = null;
-          // null 정리 (끝 null 제거)
-          while (srcT.members.length && srcT.members[srcT.members.length-1] === null) srcT.members.pop();
+          // 소스에서 제거
+          srcT.members.splice(dragSrc.slot, 1);
+          // 목적지에 삽입
+          if (dslot >= dstT.members.length) {
+            dstT.members.push(member);
+          } else {
+            dstT.members.splice(dslot, 0, member);
+          }
         }
         dragSrc = null; save(); render();
       });
@@ -779,11 +784,12 @@ function bind() {
           // slot → slot: 스왑
           if (dragSrc.ti === dti && dragSrc.slot === dslot) return;
           const srcT = state.teams[dragSrc.ti], dstT = state.teams[dti];
-          while (srcT.members.length <= dragSrc.slot) srcT.members.push(null);
-          while (dstT.members.length <= dslot) dstT.members.push(null);
-          const tmp = srcT.members[dragSrc.slot];
-          srcT.members[dragSrc.slot] = dstT.members[dslot];
-          dstT.members[dslot] = tmp;
+          const srcM = srcT.members[dragSrc.slot];
+          const dstM = dstT.members[dslot];
+          if (srcM && dstM) {
+            srcT.members[dragSrc.slot] = dstM;
+            dstT.members[dslot] = srcM;
+          }
         }
         dragSrc = null; save(); render();
       });
@@ -800,8 +806,7 @@ function bind() {
         const srcT = state.teams[dragSrc.ti];
         const member = srcT.members[dragSrc.slot];
         if (!member) return;
-        srcT.members[dragSrc.slot] = null;
-        while (srcT.members.length && srcT.members[srcT.members.length-1] === null) srcT.members.pop();
+        srcT.members.splice(dragSrc.slot, 1);
         state.unassigned.push(member.name);
         dragSrc = null; save(); render();
       });
@@ -946,7 +951,7 @@ function bind() {
       addLog(ti, m.name, amount, m.money, mode);
       changes.push({ ti, mi, money: m.money });
     }
-    inp.value = ''; saveMoney(changes); render();
+    inp.value = ''; saveMoney(); render();
   }
 
   document.querySelectorAll('[data-act]').forEach(el => {
@@ -985,7 +990,7 @@ function bind() {
         addLog(p.ti, vm.name, delta, vm.money, 'delta');
         changes.push({ ti: p.ti, mi: p.mi, money: vm.money });
       });
-      inp.value = ''; saveMoney(changes); render();
+      inp.value = ''; saveMoney(); render();
     });
   });
 
@@ -1049,8 +1054,8 @@ function renderOverlay() {
 
   // 애니메이션 종료 후 flip 클래스 제거 (패널 전환 시 재실행 방지)
   setTimeout(() => {
-    document.querySelectorAll('.fd-up, .fd-dn').forEach(el => {
-      el.classList.remove('fd-up', 'fd-dn');
+    document.querySelectorAll('.fd-old-up, .fd-new-up, .fd-old-dn, .fd-new-dn').forEach(el => {
+      el.classList.remove('fd-old-up', 'fd-new-up', 'fd-old-dn', 'fd-new-dn');
     });
   }, 400);
 
@@ -1083,22 +1088,28 @@ function startOvTimer() {
 let memberResetDone = false;
 
 STATE_REF.on('value', snapshot => {
-  const incoming = sanitize(snapshot.val());
+  const raw = snapshot.val();
 
-  // Firebase 데이터의 멤버가 현재 코드의 MEMBERS와 다르면 무시
-  const allNames = [
-    ...incoming.unassigned,
-    ...incoming.teams.flatMap(t => t.members.filter(Boolean).map(m => m.name))
-  ];
-  if (allNames.length > 0 && !allNames.every(n => MEMBERS.includes(n))) {
-    if (!memberResetDone) {
-      memberResetDone = true;
-      state = defState();
-      save();
-      if (!isOv) render();
+  // 멤버 불일치: sanitize 전 raw 데이터로 체크 — 항상 무시
+  if (raw) {
+    const rawNames = [];
+    if (Array.isArray(raw.unassigned)) rawNames.push(...raw.unassigned);
+    if (Array.isArray(raw.teams)) raw.teams.forEach(t => {
+      const members = Array.isArray(t.members) ? t.members : (t.members ? Object.values(t.members) : []);
+      members.forEach(m => { if (m && m.name) rawNames.push(m.name); });
+    });
+    if (rawNames.length > 0 && !rawNames.every(n => MEMBERS.includes(n))) {
+      if (!memberResetDone) {
+        memberResetDone = true;
+        state = defState();
+        save();
+        if (!isOv) render();
+      }
+      return; // 옛 멤버 데이터는 항상 무시
     }
-    return;
   }
+
+  const incoming = sanitize(raw);
 
   if (!isOv && state !== null && incoming.updatedAt === myLastSave) return;
 
