@@ -286,7 +286,7 @@ setTimeout(() => {
   }
 }, 5000);
 
-const MEMBERS = ['우정잉','캬앙','깐숙','베베리','예다','꿈틀','세나','김진솔','민결희','따린','단즈','코렛트'];
+const MEMBERS = ['우정잉','캬앙','깐숙','베베리','예다','꿈틀','아야네세나','김진솔','민결희','따린','단즈','코렛트'];
 const DEF_COLORS = ['#FF4757','#2ED573','#FFA502','#E879F9'];
 const TN = ['팀 1','팀 2','팀 3','팀 4'];
 const isOv = location.search.indexOf('overlay') !== -1;
@@ -318,26 +318,16 @@ function save() {
   STATE_REF.set(state);
 }
 
-// 금액 변경 전용 - 경로별 부분 업데이트 (동시 입력 충돌 방지)
-function saveMoney(changes) {
-  // changes: [{ ti, mi, money }]
-  const updates = {};
-  changes.forEach(({ ti, mi, money }) => {
-    updates[`teams/${ti}/members/${mi}/money`] = money;
-  });
-  // 로그는 transaction으로 안전하게 추가
-  const newLog = state.log.slice(0, 80);
-  updates['log'] = newLog;
-  updates['updatedAt'] = Date.now();
-  myLastSave = updates['updatedAt'];
-  STATE_REF.update(updates);
+// 금액 변경도 전체 save 사용 (Firebase 배열 구조 보존)
+function saveMoney() {
+  save();
 }
 
 // Firebase는 빈 배열을 null로 반환 → 배열로 복원
 // ── 멤버 이미지 맵 ─────────────────────────────────────────────
 const AVATAR_MAP = {
   '우정잉':'FRIENDSHIPING','캬앙':'KYAANG','깐숙':'KKANSUK','베베리':'BEBERRY',
-  '예다':'YEDA','꿈틀':'GGUMTEUL','세나':'SENA','김진솔':'KIMJINSXL',
+  '예다':'YEDA','꿈틀':'GGUMTEUL','아야네세나':'AYANE_SENA','김진솔':'KIMJINSXL',
   '민결희':'MINGYEOLHEE','따린':'DDARIN','단즈':'DANZ','코렛트':'COLLET'
 };
 const REPO_RAW = 'https://raw.githubusercontent.com/Cren0p/LifeGame/main/';
@@ -348,28 +338,22 @@ function getAvatar(name) {
 
 function sanitize(s) {
   if (!s) return defState();
-  // 저장된 멤버 목록이 현재 MEMBERS와 다르면 자동 리셋
-  const savedMembers = [
-    ...(Array.isArray(s.unassigned) ? s.unassigned : []),
-    ...(Array.isArray(s.teams) ? s.teams.flatMap(t => Array.isArray(t.members) ? t.members.filter(Boolean).map(m => m.name) : []) : [])
-  ];
-  if (savedMembers.length > 0 && !savedMembers.every(n => MEMBERS.includes(n))) {
-    return defState();
-  }
-  s.unassigned = Array.isArray(s.unassigned) ? s.unassigned : [];
-  s.log = Array.isArray(s.log) ? s.log : [];
   if (!Array.isArray(s.teams)) s.teams = defState().teams;
+  // Firebase가 배열을 객체로 변환하는 경우 대응
   s.teams.forEach(t => {
-    // Firebase는 배열을 {0:…,1:…} 객체로 반환할 수 있음 → 배열로 복원
-    if (t.members && !Array.isArray(t.members) && typeof t.members === 'object') {
-      const maxIdx = Math.max(...Object.keys(t.members).map(Number));
-      const arr = [];
-      for (let i = 0; i <= maxIdx; i++) arr.push(t.members[i] || null);
-      t.members = arr;
+    if (t.members && !Array.isArray(t.members)) {
+      t.members = Object.values(t.members).filter(m => m !== null && m !== undefined);
+    } else {
+      t.members = Array.isArray(t.members) ? t.members.filter(m => m !== null && m !== undefined) : [];
     }
-    t.members = Array.isArray(t.members) ? t.members.filter(m => m !== null && m !== undefined) : [];
     if (!t.color) t.color = DEF_COLORS[t.id] || '#888';
   });
+  // Firebase가 빈 배열을 삭제하는 경우 대응: 팀에 있는 멤버를 제외한 나머지가 미배정
+  if (!Array.isArray(s.unassigned)) {
+    const assigned = s.teams.flatMap(t => t.members.map(m => m.name));
+    s.unassigned = MEMBERS.filter(m => !assigned.includes(m));
+  }
+  s.log = Array.isArray(s.log) ? s.log : [];
   if (!Array.isArray(s.hiddenRounds) || s.hiddenRounds.length !== 3) s.hiddenRounds = [false, false, false];
   // revealState: 구버전(배열) → 신버전(객체) 자동 변환
   if (!s.revealState || Array.isArray(s.revealState) || typeof s.revealState !== 'object') {
@@ -755,22 +739,27 @@ function bind() {
         const dti = parseInt(el.dataset.dti), dslot = parseInt(el.dataset.dslot);
         if (dragSrc.type === 'pool') {
           const t = state.teams[dti];
-          // dslot 위치에 삽입 (배열 길이 맞춤)
-          while (t.members.length <= dslot) t.members.push(null);
-          if (t.members[dslot]) return; // 이미 채워짐
-          t.members[dslot] = { name: dragSrc.name, money: 0 };
+          // 빈 슬롯에 삽입 - null 없이 splice로 정확한 위치에
+          const newMember = { name: dragSrc.name, money: 0 };
+          if (dslot >= t.members.length) {
+            t.members.push(newMember);
+          } else if (!t.members[dslot]) {
+            t.members[dslot] = newMember;
+          } else return;
           state.unassigned = state.unassigned.filter(x => x !== dragSrc.name);
         } else {
-          // slot → 빈슬롯
+          // slot → 빈슬롯: 이동
           const srcT = state.teams[dragSrc.ti], dstT = state.teams[dti];
           const member = srcT.members[dragSrc.slot];
           if (!member) return;
-          while (dstT.members.length <= dslot) dstT.members.push(null);
-          if (dstT.members[dslot]) return;
-          dstT.members[dslot] = member;
-          srcT.members[dragSrc.slot] = null;
-          // null 정리 (끝 null 제거)
-          while (srcT.members.length && srcT.members[srcT.members.length-1] === null) srcT.members.pop();
+          // 소스에서 제거
+          srcT.members.splice(dragSrc.slot, 1);
+          // 목적지에 삽입
+          if (dslot >= dstT.members.length) {
+            dstT.members.push(member);
+          } else {
+            dstT.members.splice(dslot, 0, member);
+          }
         }
         dragSrc = null; save(); render();
       });
@@ -795,11 +784,12 @@ function bind() {
           // slot → slot: 스왑
           if (dragSrc.ti === dti && dragSrc.slot === dslot) return;
           const srcT = state.teams[dragSrc.ti], dstT = state.teams[dti];
-          while (srcT.members.length <= dragSrc.slot) srcT.members.push(null);
-          while (dstT.members.length <= dslot) dstT.members.push(null);
-          const tmp = srcT.members[dragSrc.slot];
-          srcT.members[dragSrc.slot] = dstT.members[dslot];
-          dstT.members[dslot] = tmp;
+          const srcM = srcT.members[dragSrc.slot];
+          const dstM = dstT.members[dslot];
+          if (srcM && dstM) {
+            srcT.members[dragSrc.slot] = dstM;
+            dstT.members[dslot] = srcM;
+          }
         }
         dragSrc = null; save(); render();
       });
@@ -816,8 +806,7 @@ function bind() {
         const srcT = state.teams[dragSrc.ti];
         const member = srcT.members[dragSrc.slot];
         if (!member) return;
-        srcT.members[dragSrc.slot] = null;
-        while (srcT.members.length && srcT.members[srcT.members.length-1] === null) srcT.members.pop();
+        srcT.members.splice(dragSrc.slot, 1);
         state.unassigned.push(member.name);
         dragSrc = null; save(); render();
       });
@@ -857,19 +846,12 @@ function bind() {
       const j = Math.floor(Math.random() * (i + 1));
       [all[i], all[j]] = [all[j], all[i]];
     }
-    // 팀 초기화 후 균등 배분 — 슬롯(경기) 순서를 보장해 배정
-    // idx 0~3 → 슬롯0, idx 4~7 → 슬롯1, idx 8~11 → 슬롯2
-    const teamCount = state.teams.length; // 4
-    state.teams.forEach(t => { t.members = [null, null, null]; });
+    // 팀 초기화 후 균등 배분 (8명 → 각 팀 2명)
+    state.teams.forEach(t => { t.members = []; });
     state.unassigned = [];
     all.forEach((name, idx) => {
-      const slot = Math.floor(idx / teamCount); // 경기 슬롯 (0,1,2)
-      const ti   = idx % teamCount;             // 팀 인덱스 (0,1,2,3)
-      if (slot < 3) state.teams[ti].members[slot] = { name, money: 0 };
-    });
-    // 멤버가 12명 미만일 때 null 슬롯 정리
-    state.teams.forEach(t => {
-      t.members = t.members.filter(m => m !== null);
+      const ti = idx % state.teams.length;
+      state.teams[ti].members.push({ name, money: 0 });
     });
     save(); render();
   });
@@ -969,7 +951,7 @@ function bind() {
       addLog(ti, m.name, amount, m.money, mode);
       changes.push({ ti, mi, money: m.money });
     }
-    inp.value = ''; saveMoney(changes); render();
+    inp.value = ''; saveMoney(); render();
   }
 
   document.querySelectorAll('[data-act]').forEach(el => {
@@ -1008,7 +990,7 @@ function bind() {
         addLog(p.ti, vm.name, delta, vm.money, 'delta');
         changes.push({ ti: p.ti, mi: p.mi, money: vm.money });
       });
-      inp.value = ''; saveMoney(changes); render();
+      inp.value = ''; saveMoney(); render();
     });
   });
 
@@ -1072,8 +1054,9 @@ function renderOverlay() {
 
   // 애니메이션 종료 후 flip 클래스 제거 (패널 전환 시 재실행 방지)
   setTimeout(() => {
-    document.querySelectorAll('.fd-up, .fd-dn').forEach(el => {
-      el.classList.remove('fd-up', 'fd-dn');
+    document.querySelectorAll('.fd-old-up, .fd-old-dn').forEach(el => el.remove());
+    document.querySelectorAll('.fd-new-up, .fd-new-dn').forEach(el => {
+      el.classList.remove('fd-new-up', 'fd-new-dn');
     });
   }, 400);
 
@@ -1104,9 +1087,25 @@ function startOvTimer() {
 
 // ── FIREBASE LISTENER ────────────────────────────────────────────
 STATE_REF.on('value', snapshot => {
-  const incoming = sanitize(snapshot.val());
+  const raw = snapshot.val();
 
-  if (!isOv && incoming.updatedAt === myLastSave && state !== null) return;
+  // 멤버 불일치: 옛 멤버 데이터는 항상 무시 (Firebase에 쓰지 않음)
+  if (raw) {
+    const rawNames = [];
+    if (Array.isArray(raw.unassigned)) rawNames.push(...raw.unassigned);
+    if (Array.isArray(raw.teams)) raw.teams.forEach(t => {
+      const members = Array.isArray(t.members) ? t.members : (t.members ? Object.values(t.members) : []);
+      members.forEach(m => { if (m && m.name) rawNames.push(m.name); });
+    });
+    if (rawNames.length > 0 && !rawNames.every(n => MEMBERS.includes(n))) {
+      if (state === null) { state = defState(); if (!isOv) render(); }
+      return;
+    }
+  }
+
+  const incoming = sanitize(raw);
+
+  if (!isOv && state !== null && incoming.updatedAt === myLastSave) return;
 
   if (isOv && state !== null && !incoming.ended && incoming.phase === 'game') {
     // 변동된 경기(round) 감지: 같은 팀·슬롯의 money 비교
