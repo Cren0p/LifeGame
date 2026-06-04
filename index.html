@@ -1098,7 +1098,10 @@ STATE_REF.on('value', snapshot => {
       members.forEach(m => { if (m && m.name) rawNames.push(m.name); });
     });
     if (rawNames.length > 0 && !rawNames.every(n => MEMBERS.includes(n))) {
-      if (state === null) { state = defState(); if (!isOv) render(); }
+      if (state === null) {
+        state = defState();
+        if (isOv) renderOverlay(); else render();
+      }
       return;
     }
   }
