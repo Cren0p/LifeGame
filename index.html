@@ -360,6 +360,13 @@ function sanitize(s) {
   s.log = Array.isArray(s.log) ? s.log : [];
   if (!Array.isArray(s.teams)) s.teams = defState().teams;
   s.teams.forEach(t => {
+    // Firebase는 배열을 {0:…,1:…} 객체로 반환할 수 있음 → 배열로 복원
+    if (t.members && !Array.isArray(t.members) && typeof t.members === 'object') {
+      const maxIdx = Math.max(...Object.keys(t.members).map(Number));
+      const arr = [];
+      for (let i = 0; i <= maxIdx; i++) arr.push(t.members[i] || null);
+      t.members = arr;
+    }
     t.members = Array.isArray(t.members) ? t.members.filter(m => m !== null && m !== undefined) : [];
     if (!t.color) t.color = DEF_COLORS[t.id] || '#888';
   });
@@ -850,12 +857,19 @@ function bind() {
       const j = Math.floor(Math.random() * (i + 1));
       [all[i], all[j]] = [all[j], all[i]];
     }
-    // 팀 초기화 후 균등 배분 (8명 → 각 팀 2명)
-    state.teams.forEach(t => { t.members = []; });
+    // 팀 초기화 후 균등 배분 — 슬롯(경기) 순서를 보장해 배정
+    // idx 0~3 → 슬롯0, idx 4~7 → 슬롯1, idx 8~11 → 슬롯2
+    const teamCount = state.teams.length; // 4
+    state.teams.forEach(t => { t.members = [null, null, null]; });
     state.unassigned = [];
     all.forEach((name, idx) => {
-      const ti = idx % state.teams.length;
-      state.teams[ti].members.push({ name, money: 0 });
+      const slot = Math.floor(idx / teamCount); // 경기 슬롯 (0,1,2)
+      const ti   = idx % teamCount;             // 팀 인덱스 (0,1,2,3)
+      if (slot < 3) state.teams[ti].members[slot] = { name, money: 0 };
+    });
+    // 멤버가 12명 미만일 때 null 슬롯 정리
+    state.teams.forEach(t => {
+      t.members = t.members.filter(m => m !== null);
     });
     save(); render();
   });
