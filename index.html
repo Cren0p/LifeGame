@@ -1082,24 +1082,9 @@ function startOvTimer() {
 
 // ── FIREBASE LISTENER ────────────────────────────────────────────
 STATE_REF.on('value', snapshot => {
-  const raw = snapshot.val();
+  const incoming = sanitize(snapshot.val());
 
-  // 첫 로드시에만 멤버 불일치 감지 (이후 업데이트에선 체크 안 함)
-  if (state === null && raw) {
-    const savedMembers = [
-      ...(Array.isArray(raw.unassigned) ? raw.unassigned : []),
-      ...(Array.isArray(raw.teams) ? raw.teams.flatMap(t => Array.isArray(t.members) ? t.members.filter(Boolean).map(m => m.name) : []) : [])
-    ];
-    if (savedMembers.length > 0 && !savedMembers.every(n => MEMBERS.includes(n))) {
-      state = defState();
-      save();
-      if (!isOv) render();
-      return;
-    }
-  }
-
-  const incoming = sanitize(raw);
-  if (!isOv && state !== null && incoming.updatedAt < myLastSave) return;
+  if (!isOv && incoming.updatedAt === myLastSave && state !== null) return;
 
   if (isOv && state !== null && !incoming.ended && incoming.phase === 'game') {
     // 변동된 경기(round) 감지: 같은 팀·슬롯의 money 비교
