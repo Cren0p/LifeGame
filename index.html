@@ -1081,6 +1081,8 @@ function startOvTimer() {
 }
 
 // ── FIREBASE LISTENER ────────────────────────────────────────────
+let memberResetDone = false;
+
 STATE_REF.on('value', snapshot => {
   const incoming = sanitize(snapshot.val());
 
@@ -1090,7 +1092,12 @@ STATE_REF.on('value', snapshot => {
     ...incoming.teams.flatMap(t => t.members.filter(Boolean).map(m => m.name))
   ];
   if (allNames.length > 0 && !allNames.every(n => MEMBERS.includes(n))) {
-    if (state === null) { state = defState(); if (!isOv) render(); }
+    if (!memberResetDone) {
+      memberResetDone = true;
+      state = defState();
+      save();
+      if (!isOv) render();
+    }
     return;
   }
 
