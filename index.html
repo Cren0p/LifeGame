@@ -1109,6 +1109,14 @@ STATE_REF.on('value', snapshot => {
 
   const incoming = sanitize(raw);
 
+  // Firebase가 비어있으면 초기 데이터 저장
+  if (!raw && state === null) {
+    state = incoming;
+    save();
+    if (isOv) renderOverlay(); else render();
+    return;
+  }
+
   if (!isOv && state !== null && incoming.updatedAt === myLastSave) return;
 
   if (isOv && state !== null && !incoming.ended && incoming.phase === 'game') {
